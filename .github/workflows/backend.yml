@@ -66,4 +66,5 @@ jobs:
             docker rm notes-backend || true
             docker run -d --name notes-backend --restart unless-stopped \
               -p 8000:8000 \
+              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
               ${{ secrets.DOCKERHUB_USERNAME }}/notes-backend:latest
