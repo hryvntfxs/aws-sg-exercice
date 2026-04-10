@@ -16,6 +16,7 @@ services:
       timeout: 3s
       retries: 5
   backend:
+    container_name: notes-backend
     build: ./backend
     ports:
       - "8000:8000"
