@@ -1,6 +1,11 @@
 function NoteList({ notes, onSelect, onDelete }) {
   if (notes.length === 0) {
-    return <p className="empty-message">No notes yet. Create your first one!</p>;
+    return (
+      <div className="empty-state">
+        <span className="empty-state-icon">&#9998;</span>
+        <p>No notes yet. Create your first one!</p>
+      </div>
+    );
   }
 
   return (

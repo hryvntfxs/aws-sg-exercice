@@ -14,22 +14,23 @@ function NoteForm({ note, onSubmit, onCancel }) {
     <form className="note-form" onSubmit={handleSubmit}>
       <input
         type="text"
-        placeholder="Title"
+        placeholder="Note title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         required
+        autoFocus
       />
       <textarea
-        placeholder="Content"
+        placeholder="Write something..."
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        rows={8}
+        rows={10}
       />
       <div className="form-actions">
         <button type="submit" className="btn btn-primary">
-          {note ? "Update" : "Create"}
+          {note ? "Save changes" : "Create note"}
         </button>
-        <button type="button" className="btn" onClick={onCancel}>
+        <button type="button" className="btn btn-ghost" onClick={onCancel}>
           Cancel
         </button>
       </div>
