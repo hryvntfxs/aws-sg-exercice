@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from database import Base, engine
+
+Base.metadata.create_all(bind=engine)
+
 app = FastAPI(title="Notes API")
 
 app.add_middleware(
