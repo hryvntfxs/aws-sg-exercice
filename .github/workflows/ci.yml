@@ -1,17 +1,13 @@
 name: CI
 
 on:
-  push:
-    branches-ignore:
-      - main
-    paths:
-      - "backend/**"
   pull_request:
     paths:
       - "backend/**"
+      - "frontend/**"
 
 jobs:
-  lint:
+  backend-lint:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -25,7 +21,7 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
 
-  test:
+  backend-test:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -37,3 +33,29 @@ jobs:
           python-version: "3.11"
       - run: pip install -r requirements.txt
       - run: pytest tests/
+
+  frontend-lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: npm run lint
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: npm run build
