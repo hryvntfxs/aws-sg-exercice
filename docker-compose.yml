@@ -4,9 +4,15 @@ services:
     build: ./backend
     ports:
       - "8000:8000"
+    volumes:
+      - notes-data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:///./data/notes.db
   frontend:
     build: ./frontend
     ports:
       - "80:80"
     depends_on:
       - backend
+volumes:
+  notes-data:
