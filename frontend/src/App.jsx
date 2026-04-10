@@ -1,115 +1,119 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useCallback } from "react";
+import { fetchNotes, createNote, updateNote, deleteNote } from "./api/notes";
+import NoteList from "./components/NoteList";
+import NoteForm from "./components/NoteForm";
+import NoteDetail from "./components/NoteDetail";
+import "./App.css";
+
+const initialNotes = await fetchNotes().catch(() => []);
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [notes, setNotes] = useState(initialNotes);
+  const [selectedNote, setSelectedNote] = useState(null);
+  const [view, setView] = useState("list");
+  const [error, setError] = useState(null);
+
+  const loadNotes = useCallback(async () => {
+    try {
+      const data = await fetchNotes();
+      setNotes(data);
+      setError(null);
+    } catch {
+      setError("Failed to load notes");
+    }
+  }, []);
+
+  const handleCreate = async (data) => {
+    try {
+      await createNote(data);
+      await loadNotes();
+      setView("list");
+    } catch {
+      setError("Failed to create note");
+    }
+  };
+
+  const handleUpdate = async (data) => {
+    try {
+      await updateNote(selectedNote.id, data);
+      await loadNotes();
+      setView("list");
+      setSelectedNote(null);
+    } catch {
+      setError("Failed to update note");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await deleteNote(id);
+      await loadNotes();
+      if (view === "detail") {
+        setView("list");
+        setSelectedNote(null);
+      }
+    } catch {
+      setError("Failed to delete note");
+    }
+  };
+
+  const handleSelect = (note) => {
+    setSelectedNote(note);
+    setView("detail");
+  };
+
+  const handleEdit = (note) => {
+    setSelectedNote(note);
+    setView("edit");
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+    <div className="app">
+      <header className="app-header">
+        <button className="title-btn" onClick={() => { setView("list"); setSelectedNote(null); }}>
+          Notes
         </button>
-      </section>
+        {view === "list" && (
+          <button className="btn btn-primary" onClick={() => setView("create")}>
+            New Note
+          </button>
+        )}
+      </header>
 
-      <div className="ticks"></div>
+      <main className="app-main">
+        {error && <p className="error-message">{error}</p>}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        {view === "list" && (
+          <NoteList notes={notes} onSelect={handleSelect} onDelete={handleDelete} />
+        )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {view === "create" && (
+          <NoteForm
+            note={null}
+            onSubmit={handleCreate}
+            onCancel={() => setView("list")}
+          />
+        )}
+
+        {view === "detail" && selectedNote && (
+          <NoteDetail
+            note={selectedNote}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onBack={() => { setView("list"); setSelectedNote(null); }}
+          />
+        )}
+
+        {view === "edit" && selectedNote && (
+          <NoteForm
+            note={selectedNote}
+            onSubmit={handleUpdate}
+            onCancel={() => { setView("detail"); }}
+          />
+        )}
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
