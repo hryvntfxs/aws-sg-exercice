@@ -92,7 +92,9 @@ Runs automatically on PRs touching `backend/` or `frontend/`:
 lint → test → Docker build & push to DockerHub → SSH deploy to EC2
 ```
 
-Each service has its own pipeline, path-filtered so a backend change does not trigger a frontend deploy and vice versa. Images are tagged `latest` and pulled directly on the EC2 instance via SSH.
+Each service has its own pipeline, path-filtered so a backend change does not trigger a frontend deploy and vice versa. The workflow files themselves (`.github/workflows/backend.yml`, `.github/workflows/frontend.yml`) are also included in the path filters so that pipeline fixes trigger a deploy without requiring a code change. Images are tagged `latest` and pulled directly on the EC2 instance via SSH.
+
+**Docker Hub & authentication:** Docker Hub free accounts allow only one private repository. The backend image is private; the frontend image is public. The backend deploy step logs into Docker Hub over SSH before pulling the image.
 
 ### Required GitHub Secrets
 
