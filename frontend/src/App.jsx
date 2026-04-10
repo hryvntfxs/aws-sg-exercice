@@ -75,7 +75,7 @@ function App() {
         </button>
         {view === "list" && (
           <button className="btn btn-primary" onClick={() => setView("create")}>
-            New Note
+            + New note
           </button>
         )}
       </header>

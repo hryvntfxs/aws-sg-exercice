@@ -63,13 +63,13 @@ Nginx proxies `/notes` requests to the backend so the frontend and API are serve
 **Production (AWS)**
 
 ```
-┌─────────────────────────────────────┐     ┌──────────────────┐
-│              EC2 Instance           │     │  Aurora RDS      │
+┌────────────────────────────────────┐     ┌──────────────────┐
+│              EC2 Instance          │     │  Aurora RDS      │
 │  ┌───────────┐   ┌───────────┐     │     │  PostgreSQL 17   │
 │  │ Frontend  │──▶│ Backend   │─────│────▶│  :5432           │
 │  │ :80       │   │ :8000     │     │     └──────────────────┘
 │  └───────────┘   └───────────┘     │
-└─────────────────────────────────────┘
+└────────────────────────────────────┘
 ```
 
 The `DATABASE_URL` environment variable switches between local Postgres and Aurora RDS with no code changes.
@@ -123,15 +123,80 @@ Each service has its own pipeline, path-filtered so a backend change does not tr
 
 ---
 
+## Branch Policy
+
+| Branch | Purpose |
+|--------|---------|
+| `main` | Production branch — merges here trigger the CD pipelines and deploy to EC2 |
+| `dev` | Integration branch for ongoing work before it is ready for production |
+| `feat/*` | Feature branches (e.g., `feat/notes-app`) — one branch per feature |
+| `ci/*` | CI/CD pipeline changes (e.g., `ci/init-pipelines`) |
+
+**Workflow:** feature and CI branches are created from `dev` or `main`, developed locally, then opened as a Pull Request targeting `main`. The CI pipeline (`ci.yml`) runs lint and tests on every PR. On merge to `main`, the CD pipelines build, push, and deploy the affected service.
+
+**Recommended protections (not yet configured):**
+
+- Require at least one approving review before merge
+- Require all CI checks to pass before merge
+- Disallow force-push to `main`
+- Enable branch deletion after merge to keep the repo clean
+
+---
+
+## Scaling Strategy
+
+A step-by-step roadmap for scaling this application from a single EC2 instance to a production-grade setup.
+
+### Step 1 — Containerized orchestration (ECS Fargate)
+
+- Move from a single EC2 + Docker to **ECS Fargate** — no instances to manage, pay per task
+- Define task definitions for frontend and backend as separate ECS services
+- Use ECS Service auto-scaling with target tracking on CPU/memory or request count
+
+### Step 2 — Load balancing & HTTPS
+
+- Add an **Application Load Balancer (ALB)** with TLS termination via an ACM certificate
+- ALB routes `/notes` to the backend target group, `/` to the frontend target group
+- Health check endpoints: `/health` on backend, `/` on frontend
+- This replaces Nginx's reverse proxy role — Nginx only serves static files
+
+### Step 3 — Database scaling
+
+- Aurora Serverless v2 already auto-scales ACUs — add **read replicas** for read-heavy workloads
+- Enable **RDS Proxy** for connection pooling if many concurrent ECS tasks connect to the database
+
+### Step 4 — Caching & CDN
+
+- **CloudFront** in front of the ALB for static asset caching and global edge distribution
+- Optional: **ElastiCache (Redis)** for API response caching if read volume grows
+
+### Step 5 — Observability
+
+- Structured JSON logging → **CloudWatch Logs**
+- **CloudWatch Container Insights** for ECS metrics
+- **X-Ray** tracing for request latency visibility
+- CloudWatch Alarms on error rates, latency P99, and unhealthy targets
+
+### Step 6 — Multi-AZ & disaster recovery
+
+- ECS tasks spread across **multiple Availability Zones** (default with Fargate)
+- Aurora already replicates across AZs — enable **multi-AZ cluster mode**
+- S3 for database backups with cross-region replication if needed
+
+---
+
 ## Known Limitations and Possible Improvements
 
 | Limitation | Improvement |
 |------------|-------------|
-| Single EC2 instance, no load balancer | Add an ALB + Auto Scaling Group for horizontal scaling |
-| No HTTPS | Add Let's Encrypt via Certbot on the EC2 instance |
+| RDS security group allows broad inbound access | Restrict inbound rules to the actual ECS/EC2 security group or private IP so only the application can reach the database |
+| ECS/EC2 ports open too broadly | Lock down inbound rules to accept traffic only from the ALB's security group, not `0.0.0.0/0` |
+| No Infrastructure as Code | Adopt **Terraform** for reproducibility, version-controlled infrastructure, drift detection, and auditability (skipped here due to time constraints) |
+| Single EC2 instance, no load balancer | Add an ALB + Auto Scaling Group for horizontal scaling (see Scaling Strategy above) |
+| No HTTPS | Add TLS termination at the ALB level with an ACM certificate, or Let's Encrypt via Certbot on EC2 |
 | `latest` Docker tag only | Tag images with the Git SHA for proper rollback capability |
 | No request authentication | Add JWT-based auth or API key middleware |
 | CORS open in development | Restrict `allow_origins` to the production domain |
 | No structured logging | Add a logging middleware that emits JSON logs for CloudWatch ingestion |
 | No health check in CI | Add a smoke test step after deploy to verify the container is responding |
-| Manual DB migrations on deploy | Wire Alembic `upgrade head` into the deploy step automatically |
+| Manual DB migrations on deploy | Wire **Alembic** `upgrade head` into the CI/CD pipeline as a dedicated step that runs before the new backend container starts |
