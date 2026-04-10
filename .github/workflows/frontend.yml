@@ -47,9 +47,10 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            docker network create notes-network || true
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/notes-frontend:latest
             docker stop notes-frontend || true
             docker rm notes-frontend || true
-            docker run -d --name notes-frontend --restart unless-stopped \
+            docker run -d --name notes-frontend --network notes-network --restart unless-stopped \
               -p 80:80 \
               ${{ secrets.DOCKERHUB_USERNAME }}/notes-frontend:latest
