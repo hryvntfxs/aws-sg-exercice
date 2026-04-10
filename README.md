@@ -115,6 +115,8 @@ Each service has its own pipeline, path-filtered so a backend change does not tr
 | **SQLAlchemy ORM** | Database-agnostic -- swap between SQLite (tests), local Postgres, and Aurora RDS with a single env var |
 | **Aurora Serverless v2** | Scales to 0 ACU when idle, near-zero cost for low-traffic apps |
 | **Nginx reverse proxy** | Serves frontend and proxies API requests on the same origin, eliminating CORS in production |
+| **Nginx runtime DNS resolution** | `proxy_pass` uses a variable + Docker's embedded DNS (`127.0.0.11`) so nginx resolves the backend at request time, not at startup -- avoids crash loops when backend isn't ready yet |
+| **Docker user-defined network** | Containers run on a shared `notes-network` bridge so they can resolve each other by name via Docker DNS |
 | **Two separate CI pipelines** | Backend and frontend deploy independently -- no unnecessary deploys, faster feedback loops |
 | **Vitest** | Native Vite integration, shares config, zero setup compared to Jest |
 | **No react-router** | A view-state string is right-sized for this scope -- no over-engineering |
