@@ -56,16 +56,22 @@ jobs:
     steps:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,DATABASE_URL
           script: |
+            docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_TOKEN
             docker network create notes-network || true
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/notes-backend:latest
+            docker pull $DOCKERHUB_USERNAME/notes-backend:latest
             docker stop notes-backend || true
             docker rm notes-backend || true
             docker run -d --name notes-backend --network notes-network --restart unless-stopped \
               -p 8000:8000 \
-              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
-              ${{ secrets.DOCKERHUB_USERNAME }}/notes-backend:latest
+              -e DATABASE_URL=$DATABASE_URL \
+              $DOCKERHUB_USERNAME/notes-backend:latest
